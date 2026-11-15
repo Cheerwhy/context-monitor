@@ -1,0 +1,12 @@
+{
+  "name": "context-monitor",
+  "displayName": "Context Monitor",
+  "version": "1.0.0",
+  "description": "Live read-only monitor of current conversation context window tokens, cache hit ratio, and per-step growth from local transcript logs.",
+  "logo": "assets/logo.svg",
+  "suggestedPrompts": [
+    "Open the Context Monitor side panel to inspect current context usage",
+    "Check my cache hit ratio and token growth across recent steps",
+    "See how much context was reclaimed after running /compact"
+  ]
+}
