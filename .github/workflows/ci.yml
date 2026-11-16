@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Syntax check
+        run: |
+          node --check sidecars/context_monitor/main.mjs
+          node --check sidecars/context_monitor/transcript_reader.mjs
+          node --check sidecars/context_monitor/app.js
+
+      - name: Validate JSON manifests
+        run: |
+          node <<'EOF'
+          const fs = require('node:fs');
+          for (const p of [
+            'plugin.json',
+            'sidecars/context_monitor/sidecar.json',
+            'sidecars/context_monitor/package.json',
+          ]) {
+            JSON.parse(fs.readFileSync(p, 'utf8'));
+          }
+          EOF
+
+      - name: Run unit tests
+        run: node --test tests/*.test.mjs

@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify code, manifests, and version tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          node --check sidecars/context_monitor/main.mjs
+          node --check sidecars/context_monitor/transcript_reader.mjs
+          node --check sidecars/context_monitor/app.js
+          node <<'EOF'
+          const fs = require('node:fs');
+          const expected = process.env.TAG_NAME.replace(/^v/, '');
+          const plugin = JSON.parse(fs.readFileSync('plugin.json', 'utf8'));
+          const pkg = JSON.parse(fs.readFileSync('sidecars/context_monitor/package.json', 'utf8'));
+          JSON.parse(fs.readFileSync('sidecars/context_monitor/sidecar.json', 'utf8'));
+          if (plugin.version !== expected || pkg.version !== expected) {
+            console.error(`Version mismatch: tag=${expected}, plugin.json=${plugin.version}, package.json=${pkg.version}`);
+            process.exit(1);
+          }
+          EOF
+          node --test tests/*.test.mjs
+
+      - name: Package plugin archive
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          mkdir -p "dist/pkg/context-monitor"
+          cp -R plugin.json README.md assets sidecars "dist/pkg/context-monitor/"
+          (cd dist/pkg && zip -r "../context-monitor-${TAG_NAME}.zip" context-monitor)
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          flags=(--verify-tag --title "$TAG_NAME" --generate-notes)
+          if [[ "$TAG_NAME" == *-* ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "$TAG_NAME" "dist/context-monitor-${TAG_NAME}.zip" "${flags[@]}"
