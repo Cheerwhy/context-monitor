@@ -11,24 +11,24 @@
 <body>
   <div class="shell">
     <header class="topbar">
-      <div class="title-group">
-        <div class="title-row">
-          <h1 class="title">Context Monitor</h1>
-          <button type="button" id="live-pill" class="live-pill" title="Click to refresh now (auto-polls transcript.jsonl every 1.5s)">
-            <span class="live-dot" aria-hidden="true"></span>
-            <span id="live-text">Live</span>
-          </button>
-        </div>
-        <div id="conv-meta" class="conv-meta">Waiting for session…</div>
+      <div class="status-group">
+        <button type="button" id="live-pill" class="live-pill" title="Click to refresh now (auto-polls transcript.jsonl every 1.5s)">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span id="live-text">Live</span>
+        </button>
+        <span class="sep" aria-hidden="true">·</span>
+        <span id="conv-meta" class="conv-meta" title="Current conversation session">Waiting…</span>
+        <span id="updated-meta" class="updated-meta hidden" title="Last transcript update"></span>
       </div>
 
-      <label class="budget-picker" title="Context window limit used for percentage calculation">
+      <label class="budget-picker" title="Display limit for usage percentage and warning thresholds">
         <span class="budget-label">Limit</span>
         <select id="budget-select" aria-label="Context limit">
           <option value="200000">200K</option>
           <option value="256000">256K</option>
-          <option value="1000000" selected>1M</option>
-          <option value="2000000">2M</option>
+          <option value="512000" selected>512K (Auto)</option>
+          <option value="1000000">1M (Window)</option>
+          <option value="2000000">2M (Window)</option>
         </select>
       </label>
     </header>
@@ -54,20 +54,32 @@
       <section class="card hero">
         <div class="card-head">
           <span class="card-label">Current Turn Context</span>
-          <span id="pct-badge" class="pct-badge">0.0%</span>
+          <div class="head-badges">
+            <span id="delta-badge" class="delta-badge hidden" title="Net context change vs previous step"></span>
+            <span id="pct-badge" class="pct-badge">0.0%</span>
+          </div>
         </div>
 
         <div class="hero-num-row">
-          <span id="ctx-total" class="hero-num">0</span>
-          <span id="ctx-budget" class="hero-denom">/ 1,000,000 tokens</span>
+          <div class="hero-main">
+            <span id="ctx-total" class="hero-num">0</span>
+            <span id="ctx-budget" class="hero-denom">/ 512,000</span>
+          </div>
+          <span id="ctx-remaining" class="hero-remaining"></span>
         </div>
 
         <div id="bar-track" class="bar-track" aria-hidden="true">
           <div id="bar-cache" class="bar-cache" style="width: 0%"></div>
           <div id="bar-input" class="bar-input" style="width: 0%"></div>
+          <div id="bar-compact-tick" class="bar-tick hidden"></div>
         </div>
 
-        <div class="pills">
+        <div id="compact-hint" class="compact-hint hidden">
+          <span id="compact-hint-text" class="compact-hint-text"></span>
+          <button type="button" id="copy-compact-btn" class="copy-btn" title="Copy /compact command to clipboard">Copy /compact</button>
+        </div>
+
+        <div id="pills-row" class="pills">
           <span class="pill">
             <span class="dot dot-input"></span>
             <span><span id="m-input-label">New Input</span>: <strong id="m-input">0</strong></span>
@@ -85,7 +97,7 @@
         <div id="session-totals" class="totals-line"></div>
       </section>
 
-      <section class="card">
+      <section class="card chart-card">
         <div class="card-head">
           <span class="card-label">Context Growth by Step</span>
           <span id="chart-range" class="card-sub"></span>
@@ -98,6 +110,7 @@
           <span><span class="dot dot-cache"></span>Cache Read</span>
           <span><span class="dot dot-input"></span>New Input</span>
           <span id="compact-legend" class="hidden"><span class="dot dot-compact"></span>Compacted</span>
+          <span class="legend-hint">Click bar to locate</span>
         </div>
       </section>
 
@@ -111,11 +124,12 @@
             <thead>
               <tr>
                 <th>Step</th>
-                <th>Action / Tools</th>
-                <th class="num">Input</th>
-                <th class="num">Cache</th>
+                <th>Action</th>
+                <th class="num">Context</th>
+                <th class="num" title="Net context change vs previous step">Δ</th>
+                <th class="num col-hit" title="Cache hit rate">Hit</th>
                 <th class="num">Out</th>
-                <th class="num">Elapsed</th>
+                <th class="num col-time">Time</th>
               </tr>
             </thead>
             <tbody id="turns-body"></tbody>
